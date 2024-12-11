@@ -1,4 +1,5 @@
 import math
+from typing import Any, Dict, List, Tuple
 import numpy as np
 
 import Box2D
@@ -145,7 +146,7 @@ class HockeyEnv(gym.Env, EzPickle):
         - Keep Puck Mode
         - 16 time left player has puck
         - 17 time left other player has puck
-    
+
     Action Space (Discrete(8)):
         - Action 0: do nothing
         - Action 1: -1 in x
@@ -155,9 +156,10 @@ class HockeyEnv(gym.Env, EzPickle):
         - Action 5: -1 in angle
         - Action 6: 1 in angle
         - Action 7: shoot (if keep_mode is on)
-        
+
 
     """
+
     metadata = {"render.modes": ["human", "rgb_array"], "render_fps": FPS}
 
     continuous = False
@@ -172,14 +174,14 @@ class HockeyEnv(gym.Env, EzPickle):
         Build and environment instance
 
         Args:
-            keep_mode (bool, optional): whether the puck gets catched by the player. 
+            keep_mode (bool, optional): whether the puck gets catched by the player.
                 This can be changed later using the reset function. Defaults to True.
             mode (int | str | Mode, optional): mode: is the game mode: NORMAL (0),
                 TRAIN_SHOOTING (1), TRAIN_DEFENSE (2). Defaults to Mode.NORMAL.
             verbose (bool, optional): Verbose logging. Defaults to False.
         """
         EzPickle.__init__(self)
-        self.seed()
+        self.set_seed()
         self.screen = None
         self.clock = None
         self.surf = None
@@ -218,14 +220,22 @@ class HockeyEnv(gym.Env, EzPickle):
         )
 
         # see discrete_to_continous_action()
-        # TODO: 
+        # TODO:
         self.discrete_action_space = spaces.Discrete(7)
 
         self.verbose = verbose
 
         self.reset(self.one_starts)
 
-    def seed(self, seed=None):
+    def set_seed(self, seed: int = None) -> List[int]:
+        """set seed. If no argument provided or seed=None. Set a random seed
+
+        Args:
+            seed (int, optional): seed. Defaults to None.
+
+        Returns:
+            List[int]: in list embedded seed
+        """
         self.np_random, seed = seeding.np_random(seed)
         self._seed = seed
         return [seed]
@@ -466,10 +476,25 @@ class HockeyEnv(gym.Env, EzPickle):
         return goal
 
     def reset(
-        self, one_starting=None, mode: Mode | int = None, seed=None, options=None
-    ):
+        self,
+        one_starting=None,
+        mode: str | int | Mode = None,
+        seed: int = None,
+        options: Dict[str, Any] = None,
+    ) -> Tuple[np.ndarray, Dict[str, Any]]:
+        """reset the environment
+
+        Args:
+            one_starting (_type_, optional): player one starts. Defaults to None.
+            mode (str | int | Mode, optional): environment mode analog to `mode` in __init__. Defaults to None.
+            seed (int, optional): random seed for env. Defaults to None.
+            options (Dict[str, Any], optional): Not used. Defaults to None.
+
+        Returns:
+            Tuple[np.ndarray, Dict[str, Any]]: observation, info dictionary
+        """
         self._destroy()
-        self.seed(seed)
+        self.set_seed(seed)
         self.world.contactListener_keepref = ContactDetector(self, verbose=self.verbose)
         self.world.contactListener = self.world.contactListener_keepref
         self.done = False
@@ -681,8 +706,12 @@ class HockeyEnv(gym.Env, EzPickle):
         )
         return obs
 
-    def obs_agent_two(self):
-        """returns the observations for agent two (symmetric mirrored version of agent one)"""
+    def obs_agent_two(self) -> np.ndarray:
+        """returns the observations for agent two (symmetric mirrored version of agent one)
+
+        Returns:
+            np.ndarray: observation array for agent
+        """
         obs = np.hstack(
             [
                 -(self.player2.position - [CENTER_X, CENTER_Y]),
@@ -719,7 +748,15 @@ class HockeyEnv(gym.Env, EzPickle):
 
     # function that computes the reward returned to the agent, here with some reward shaping
     # the shaping should probably be removed in future versions
-    def get_reward(self, info):
+    def get_reward(self, info: Dict[str, Any]) -> float:
+        """extract reward from info dict
+
+        Args:
+            info (Dict[str, Any]): info dict with key: "reward_closeness_to_puck"
+
+        Returns:
+            float: reward signal
+        """
         r = self._compute_reward()
         r += info["reward_closeness_to_puck"]
         return float(r)
@@ -761,6 +798,11 @@ class HockeyEnv(gym.Env, EzPickle):
         }
 
     def get_info_agent_two(self):
+        """mirrored version of get_info_agent_one
+
+        Returns:
+            Dict[str, float]: info dictionary
+        """
         # see get_info for player 1. here everything is just mirrored
         reward_closeness_to_puck = 0
         if self.puck.position[0] > CENTER_X and self.puck.linearVelocity[0] >= 0:
@@ -790,8 +832,12 @@ class HockeyEnv(gym.Env, EzPickle):
             "reward_puck_direction": float(reward_puck_direction),
         }
 
-    def set_state(self, state):
-        """function to revert the state of the environment to a previous state (observation)"""
+    def set_state(self, state: np.ndarray):
+        """function to revert the state of the environment to a previous state (observation)
+
+        Args:
+            state (np.ndarray): return to this state
+        """
         self.player1.position = (state[[0, 1]] + [CENTER_X, CENTER_Y]).tolist()
         self.player1.angle = math.atan2(state[2], state[3])
         self.player1.linearVelocity = [state[4], state[5]]
@@ -838,18 +884,30 @@ class HockeyEnv(gym.Env, EzPickle):
                 True,
             )
 
-    def discrete_to_continous_action(self, discrete_action):
+    def discrete_to_continous_action(self, discrete_action: int) -> np.ndarray:
         """converts discrete actions into continuous ones (for each player)
         The actions allow only one operation each timestep, e.g. X or Y or angle change.
+
         This is surely limiting. Other discrete actions are possible
-        Action 0: do nothing
-        Action 1: -1 in x
-        Action 2: 1 in x
-        Action 3: -1 in y
-        Action 4: 1 in y
-        Action 5: -1 in angle
-        Action 6: 1 in angle
-        Action 7: shoot (if keep_mode is on)
+            - Action 0: do nothing
+            - Action 1: -1 in x
+            - Action 2: 1 in x
+            - Action 3: -1 in y
+            - Action 4: 1 in y
+            - Action 5: -1 in angle
+            - Action 6: 1 in angle
+            - Action 7: shoot (if keep_mode is on)
+
+
+        Args:
+            discrete_action (int): action to choose from [0, ..., 7]
+
+        Returns:
+            np.ndarray: continuous action
+                - x action
+                - y action
+                - angle to turn
+                - if keep_dim == True: shoot or not
         """
         action_cont = [
             (discrete_action == 1) * -1.0 + (discrete_action == 2) * 1.0,  # player x
@@ -859,9 +917,21 @@ class HockeyEnv(gym.Env, EzPickle):
         if self.keep_mode:
             action_cont.append((discrete_action == 7) * 1.0)
 
+        action_cont = np.ndarray(action_cont)
+
         return action_cont
 
-    def step(self, action):
+    def step(
+        self, action: int | np.ndarray
+    ) -> Tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+        """apply action to environment
+
+        Args:
+            action (int | np.ndarray): either discrete or continuous action
+
+        Returns:
+            Tuple[np.ndarray, float, bool, bool, dict[str, Any]]: observation, reward, done, truncated, info
+        """
         action = np.clip(action, -1, +1).astype(np.float32)
 
         self._apply_translation_action_with_max_speed(
@@ -909,7 +979,15 @@ class HockeyEnv(gym.Env, EzPickle):
         # Todo: maybe use the truncation flag when the time runs out!
         return obs, reward, self.done, False, info
 
-    def render(self, mode="human"):
+    def render(self, mode: str = "human") -> None | np.ndarray:
+        """render the state of the environment
+
+        Args:
+            mode (str, optional): render mode. Defaults to "human".
+
+        Returns:
+            None | np.ndarray: depending on the render mode there is a return or not
+        """
         if mode is None:
             gym.logger.warn("the render method needs a rendering mode")
             return
@@ -973,6 +1051,9 @@ class HockeyEnv(gym.Env, EzPickle):
             )
 
     def close(self):
+        """
+        close the environment after training
+        """
         if self.screen is not None:
             import pygame
 
