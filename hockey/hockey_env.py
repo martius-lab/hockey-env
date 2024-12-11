@@ -6,11 +6,9 @@ import Box2D
 
 # noinspection PyUnresolvedReferences
 from Box2D.b2 import (
-    edgeShape,
     circleShape,
     fixtureDef,
     polygonShape,
-    revoluteJointDef,
     contactListener,
 )
 
@@ -19,8 +17,6 @@ from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import seeding, EzPickle
 
-# import pyglet
-# from pyglet import gl
 
 FPS = 50
 SCALE = 60.0  # affects how fast-paced the game is, forces should be adjusted as well (Don't touch)
