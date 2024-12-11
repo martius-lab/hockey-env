@@ -1059,7 +1059,7 @@ class HockeyEnv(gym.Env, EzPickle):
 
     @property
     def mode(self) -> Mode:
-        return self.mode
+        return self._mode
 
     @mode.setter
     def mode(self, value: str | int | Mode):
@@ -1068,17 +1068,17 @@ class HockeyEnv(gym.Env, EzPickle):
         """
         if isinstance(value, Mode):
             # If the input is already an Enum member, set it directly
-            self._value = value
+            self._mode = value
         elif isinstance(value, str):
             # If the input is a name, convert it to the Enum
             try:
-                self._value = Mode[value]
+                self._mode = Mode[value]
             except KeyError:
                 raise ValueError(f"{value} is not a valid name for {Mode.__name__}")
         elif isinstance(value, int):
             # If the input is a value, convert it to the Enum
             try:
-                self._value = Mode(value)
+                self._mode = Mode(value)
             except ValueError:
                 raise ValueError(f"{value} is not a valid value for {Mode.__name__}")
         else:
