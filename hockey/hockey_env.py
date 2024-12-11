@@ -123,6 +123,41 @@ class Mode(Enum):
 
 
 class HockeyEnv(gym.Env, EzPickle):
+    """
+
+    Observation Space:
+        - 0  x pos player one
+        - 1  y pos player one
+        - 2  angle player one
+        - 3  x vel player one
+        - 4  y vel player one
+        - 5  angular vel player one
+        - 6  x player two
+        - 7  y player two
+        - 8  angle player two
+        - 9 y vel player two
+        - 10 y vel player two
+        - 11 angular vel player two
+        - 12 x pos puck
+        - 13 y pos puck
+        - 14 x vel puck
+        - 15 y vel puck
+        - Keep Puck Mode
+        - 16 time left player has puck
+        - 17 time left other player has puck
+    
+    Action Space (Discrete(8)):
+        - Action 0: do nothing
+        - Action 1: -1 in x
+        - Action 2: 1 in x
+        - Action 3: -1 in y
+        - Action 4: 1 in y
+        - Action 5: -1 in angle
+        - Action 6: 1 in angle
+        - Action 7: shoot (if keep_mode is on)
+        
+
+    """
     metadata = {"render.modes": ["human", "rgb_array"], "render_fps": FPS}
 
     continuous = False
@@ -133,8 +168,8 @@ class HockeyEnv(gym.Env, EzPickle):
         mode: int | str | Mode = Mode.NORMAL,
         verbose=False,
     ):
-        """,
-
+        """
+        Build and environment instance
 
         Args:
             keep_mode (bool, optional): whether the puck gets catched by the player. 
@@ -172,25 +207,6 @@ class HockeyEnv(gym.Env, EzPickle):
 
         self.closest_to_goal_dist = 1000
 
-        # 0  x pos player one
-        # 1  y pos player one
-        # 2  angle player one
-        # 3  x vel player one
-        # 4  y vel player one
-        # 5  angular vel player one
-        # 6  x player two
-        # 7  y player two
-        # 8  angle player two
-        # 9 y vel player two
-        # 10 y vel player two
-        # 11 angular vel player two
-        # 12 x pos puck
-        # 13 y pos puck
-        # 14 x vel puck
-        # 15 y vel puck
-        # Keep Puck Mode
-        # 16 time left player has puck
-        # 17 time left other player has puck
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=(18,), dtype=np.float32
         )
@@ -202,6 +218,7 @@ class HockeyEnv(gym.Env, EzPickle):
         )
 
         # see discrete_to_continous_action()
+        # TODO: 
         self.discrete_action_space = spaces.Discrete(7)
 
         self.verbose = verbose
