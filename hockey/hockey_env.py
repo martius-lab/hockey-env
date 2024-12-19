@@ -750,11 +750,21 @@ class HockeyEnv(gym.Env, EzPickle):
 
     return action_cont
 
-  def step(self, action: int | np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
+  def step(self, action: np.ndarray) -> Tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
     """apply action to environment
 
     Args:
-      action (int | np.ndarray): either discrete or continuous action
+      action (np.ndarray): either discrete or continuous action. The vector includes actions for agent 1 an agent 2.
+        The first half is for agent 1, the second half is for agent 2.
+        In case of continuous actions: 
+        - dim 0: translation in x
+        - dim 1: translation in y
+        - dim 2: rotation action
+        - dim (3: only in keep mode -> shoot puck)
+        - dim 4-7 same as for 0-3 but for agent 2
+        In case of discrete actions (NOTE: currently not supported):
+        - dim 0: discrete action for agent 1
+        - dim 1: discrete action for agent 2
 
     Returns:
       Tuple[np.ndarray, float, bool, bool, dict[str, Any]]: observation, reward, done, truncated, info
