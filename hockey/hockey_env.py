@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 import numpy as np
 
 import Box2D
@@ -10,7 +10,9 @@ import gymnasium as gym
 from gymnasium import spaces
 from gymnasium.error import DependencyNotInstalled
 from gymnasium.utils import seeding, EzPickle
+from gymnasium.envs.registration import register
 from enum import Enum
+
 
 # import pyglet
 # from pyglet import gl
@@ -121,7 +123,7 @@ class HockeyEnv(gym.Env, EzPickle):
 
   continuous = False
 
-  def __init__(self, keep_mode: bool=True, mode: int | str | Mode = Mode.NORMAL, verbose: bool=False):
+  def __init__(self, keep_mode: bool=True, mode: int | str | Mode = Mode.NORMAL, verbose: bool=False, render_mode: Optional[str] = None,):  
     """
       Build and environment instance
 
@@ -131,6 +133,7 @@ class HockeyEnv(gym.Env, EzPickle):
         mode (int | str | Mode, optional): mode: is the game mode: NORMAL (0),
             TRAIN_SHOOTING (1), TRAIN_DEFENSE (2). Defaults to Mode.NORMAL.
         verbose (bool, optional): Verbose logging. Defaults to False.
+        render_mode (str, optional): in which mode you would like to render the environment
         """
     EzPickle.__init__(self)
     self.set_seed()
@@ -190,6 +193,7 @@ class HockeyEnv(gym.Env, EzPickle):
     self.discrete_action_space = spaces.Discrete(7)
 
     self.verbose = verbose
+    self.render_mode = render_mode
 
     self.reset(self.one_starts)
 
@@ -807,16 +811,13 @@ class HockeyEnv(gym.Env, EzPickle):
     # Todo: maybe use the truncation flag when the time runs out!
     return obs, reward, self.done, False, info
 
-  def render(self, mode: str = "human") -> None | np.ndarray:
+  def render(self) -> None | np.ndarray:
     """render the state of the environment
-
-    Args:
-      mode (str, optional): render mode. Defaults to "human".
 
     Returns:
       None | np.ndarray: depending on the render mode there is a return or not
     """
-    if mode is None:
+    if self.render_mode is None:
       gym.logger.warn(
         "the render method needs a rendering mode"
       )
@@ -828,7 +829,7 @@ class HockeyEnv(gym.Env, EzPickle):
       raise DependencyNotInstalled(
         "pygame is not installed, run `pip install gym[box2d]`"
       )
-    if self.screen is None and mode == "human":
+    if self.screen is None and self.render_mode == "human":
       pygame.init()
       pygame.display.init()
       self.screen = pygame.display.set_mode((VIEWPORT_W, VIEWPORT_H))
@@ -853,13 +854,13 @@ class HockeyEnv(gym.Env, EzPickle):
     # self.score_label.draw()
     self.surf = pygame.transform.flip(self.surf, False, True)
 
-    if mode == "human":
+    if self.render_mode == "human":
       assert self.screen is not None
       self.screen.blit(self.surf, (0, 0))
       pygame.event.pump()
       self.clock.tick(self.metadata["render_fps"])
       pygame.display.flip()
-    elif mode == "rgb_array":
+    elif self.render_mode == "rgb_array":
       return np.transpose(
         np.array(pygame.surfarray.pixels3d(self.surf)), axes=(1, 0, 2)
       )
@@ -1008,9 +1009,6 @@ class HockeyEnv_BasicOpponent(HockeyEnv):
     a2 = self.opponent.act(ob2)
     action2 = np.hstack([action, a2])
     return super().step(action2)
-
-
-from gymnasium.envs.registration import register
 
 try:
   register(
