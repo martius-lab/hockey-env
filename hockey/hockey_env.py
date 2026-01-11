@@ -82,13 +82,13 @@ class Mode(Enum):
 
 class HockeyEnv(gym.Env, EzPickle):
   metadata = {
-    'render.modes': ['human', 'rgb_array'],
+    'render_modes': ['human', 'rgb_array'],
     'render_fps': FPS
   }
 
   continuous = False
 
-  def __init__(self, keep_mode: bool=True, mode: int | str | Mode = Mode.NORMAL, verbose: bool=False):
+  def __init__(self, keep_mode: bool=True, mode: int | str | Mode = Mode.NORMAL, verbose: bool=False, render_mode: str = 'human'):
     """ mode: is the game mode: NORMAL, TRAIN_SHOOTING, TRAIN_DEFENSE,
         keep_mode: whether the puck gets catched by the player
         it can be changed later using the reset function
@@ -100,6 +100,7 @@ class HockeyEnv(gym.Env, EzPickle):
     self.surf = None
     self.isopen = True
     self.mode = mode
+    self.render_mode = render_mode
     self.keep_mode = keep_mode
     self.player1_has_puck = 0
     self.player2_has_puck = 0
@@ -694,8 +695,8 @@ class HockeyEnv(gym.Env, EzPickle):
     # Todo: maybe use the truncation flag when the time runs out!
     return obs, reward, self.done, False, info
 
-  def render(self, mode='human'):
-    if mode is None:
+  def render(self):
+    if self.render_mode is None:
       gym.logger.warn(
         "the render method needs a rendering mode"
       )
@@ -707,7 +708,7 @@ class HockeyEnv(gym.Env, EzPickle):
       raise DependencyNotInstalled(
         "pygame is not installed, run `pip install gym[box2d]`"
       )
-    if self.screen is None and mode == "human":
+    if self.screen is None and self.render_mode == "human":
       pygame.init()
       pygame.display.init()
       self.screen = pygame.display.set_mode((VIEWPORT_W, VIEWPORT_H))
@@ -732,13 +733,13 @@ class HockeyEnv(gym.Env, EzPickle):
     # self.score_label.draw()
     self.surf = pygame.transform.flip(self.surf, False, True)
 
-    if mode == "human":
+    if self.render_mode == "human":
       assert self.screen is not None
       self.screen.blit(self.surf, (0, 0))
       pygame.event.pump()
       self.clock.tick(self.metadata["render_fps"])
       pygame.display.flip()
-    elif mode == "rgb_array":
+    elif self.render_mode == "rgb_array":
       return np.transpose(
         np.array(pygame.surfarray.pixels3d(self.surf)), axes=(1, 0, 2)
       )
@@ -873,8 +874,8 @@ class HumanOpponent():
 
 
 class HockeyEnv_BasicOpponent(HockeyEnv):
-  def __init__(self, mode=Mode.NORMAL, weak_opponent=False):
-    super().__init__(mode=mode, keep_mode=True)
+  def __init__(self, mode=Mode.NORMAL, weak_opponent=False, **kwargs):
+    super().__init__(mode=mode, keep_mode=True, **kwargs)
     self.opponent = BasicOpponent(weak=weak_opponent)
     # linear force in (x,y)-direction, torque, and shooting
     self.action_space = spaces.Box(-1, +1, (4,), dtype=np.float32)
